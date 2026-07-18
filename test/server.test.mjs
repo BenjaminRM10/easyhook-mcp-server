@@ -21,6 +21,8 @@ test("negotiates MCP and exposes the restricted tool set", async () => {
     assert.deepEqual(
       response.tools.map((tool) => tool.name).sort(),
       [
+        "get_recent_messages",
+        "list_conversations",
         "list_flows",
         "list_media",
         "list_templates",
@@ -40,5 +42,56 @@ test("negotiates MCP and exposes the restricted tool set", async () => {
   } finally {
     await client.close();
     await server.close();
+  }
+});
+
+test("only exposes conversation data for allowlisted contacts", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/v1/conversations") {
+      return new Response(JSON.stringify({
+        from: "5218661479075",
+        conversations: [
+          { contact: { phone: "5215660069997", name: "Allowed" }, last_message: { text: "ok" } },
+          { contact: { phone: "528442461514", name: "Private" }, last_message: { text: "hidden" } },
+        ],
+        pagination: { has_more: false, next_cursor: null },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.pathname === "/v1/conversations/5215660069997/messages") {
+      return new Response(JSON.stringify({ contact: "5215660069997", messages: [{ direction: "in", text: "reply" }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ error: "not_found" }), { status: 404 });
+  };
+
+  const server = createServer(loadConfig({
+    EASYHOOK_API_KEY: "eh_live_test",
+    EASYHOOK_FROM: "5218661479075",
+    EASYHOOK_ALLOWED_TO: "5215660069997",
+  }));
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: "easyhook-mcp-test", version: "1.0.0" });
+
+  await server.connect(serverTransport);
+  try {
+    await client.connect(clientTransport);
+    const conversations = await client.callTool({ name: "list_conversations", arguments: {} });
+    assert.match(JSON.stringify(conversations.content), /Allowed/);
+    assert.doesNotMatch(JSON.stringify(conversations.content), /Private|hidden/);
+
+    const messages = await client.callTool({ name: "get_recent_messages", arguments: { contact: "+52 1 566 006 9997" } });
+    assert.match(JSON.stringify(messages.content), /reply/);
+
+    const denied = await client.callTool({ name: "get_recent_messages", arguments: { contact: "528442461514" } });
+    assert.equal(denied.isError, true);
+    assert.match(JSON.stringify(denied.content), /recipient_not_allowed/);
+  } finally {
+    await client.close();
+    await server.close();
+    globalThis.fetch = originalFetch;
   }
 });

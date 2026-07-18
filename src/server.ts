@@ -7,7 +7,48 @@ const mediaType = z.enum(["image", "video", "audio", "document", "sticker"]);
 
 export function createServer(config: EasyhookConfig): McpServer {
   const client = new EasyhookClient(config);
-  const server = new McpServer({ name: "easyhook", version: "0.1.0" });
+  const server = new McpServer({ name: "easyhook", version: "0.2.0" });
+
+  server.registerTool(
+    "list_conversations",
+    {
+      title: "List Easyhook conversations",
+      description: "List recent WhatsApp conversations for the configured sender. Only contacts in EASYHOOK_ALLOWED_TO are returned.",
+      inputSchema: z.object({
+        limit: z.number().int().min(1).max(100).default(20),
+        before: z.string().optional().describe("ISO 8601 cursor from a previous response."),
+      }),
+    },
+    async ({ limit, before }) => execute(async () => {
+      const response = await client.get("/v1/conversations", compactStrings({
+        from: config.from,
+        limit: "100",
+        before,
+      }));
+      return filterAllowedConversations(response, config.allowedTo, limit);
+    }),
+  );
+
+  server.registerTool(
+    "get_recent_messages",
+    {
+      title: "Get recent Easyhook messages",
+      description: "Read recent inbound and outbound WhatsApp messages with one allowlisted contact.",
+      inputSchema: z.object({
+        contact: z.string().describe("Contact phone. Must be in EASYHOOK_ALLOWED_TO."),
+        limit: z.number().int().min(1).max(100).default(50),
+        before: z.string().optional().describe("ISO 8601 cursor from a previous response."),
+      }),
+    },
+    async ({ contact, limit, before }) => execute(async () => {
+      const allowedContact = requireAllowedRecipient(config, contact);
+      return client.get(`/v1/conversations/${encodeURIComponent(allowedContact)}/messages`, compactStrings({
+        from: config.from,
+        limit: String(limit),
+        before,
+      }));
+    }),
+  );
 
   server.registerTool(
     "send_text",
@@ -193,4 +234,24 @@ async function execute(operation: () => Promise<unknown>) {
 
 function compact(input: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined && value !== null && value !== ""));
+}
+
+function compactStrings(input: Record<string, string | undefined>): Record<string, string> {
+  return Object.fromEntries(Object.entries(input).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1] !== ""));
+}
+
+function filterAllowedConversations(response: unknown, allowedTo: ReadonlySet<string>, limit: number): unknown {
+  if (!isRecord(response) || !Array.isArray(response.conversations)) return response;
+  const conversations = response.conversations
+    .filter((conversation) => {
+      if (!isRecord(conversation) || !isRecord(conversation.contact)) return false;
+      const phone = typeof conversation.contact.phone === "string" ? conversation.contact.phone.replace(/\D/g, "") : "";
+      return allowedTo.has(phone);
+    })
+    .slice(0, limit);
+  return { ...response, conversations };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

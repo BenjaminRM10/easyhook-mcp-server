@@ -1,12 +1,12 @@
 # Easyhook MCP Server
 
-Use Easyhook from Codex, Claude, and other Model Context Protocol clients. The server fixes one Easyhook sender and only permits destinations explicitly listed at startup.
+Use Easyhook from Codex, Claude, and other Model Context Protocol clients. The server fixes one Easyhook sender and only permits reading from or writing to contacts explicitly listed at startup.
 
 ## Security model
 
 - `EASYHOOK_API_KEY` is read from the MCP process environment and is never accepted as a tool argument.
 - `EASYHOOK_FROM` fixes the sender for every operation.
-- `EASYHOOK_ALLOWED_TO` is a required comma-separated allowlist. Every send is checked locally before Easyhook is called.
+- `EASYHOOK_ALLOWED_TO` is a required comma-separated allowlist. Every send and message read is checked locally.
 - There is no unrestricted HTTP tool and no tenant administration tool.
 - Keep the API key outside prompts, repositories, and workflow inputs.
 
@@ -41,7 +41,7 @@ Restart the MCP client after changing configuration.
 | --- | --- | --- |
 | `EASYHOOK_API_KEY` | Yes | Easyhook organization API key. |
 | `EASYHOOK_FROM` | Yes | Fixed Easyhook WhatsApp sender. Formatted numbers are normalized to digits. |
-| `EASYHOOK_ALLOWED_TO` | Yes | Comma-separated destination phone allowlist. |
+| `EASYHOOK_ALLOWED_TO` | Yes | Comma-separated readable and writable contact phone allowlist. |
 | `EASYHOOK_BASE_URL` | No | API origin. Defaults to `https://api.easyhook.dev`. |
 
 ## Tools
@@ -56,6 +56,10 @@ Restart the MCP client after changing configuration.
 | `list_templates` | List templates for the configured sender's WABA. |
 | `list_media` | List reusable media for the configured sender's WABA. |
 | `list_flows` | List Flows for the configured sender's WABA. |
+| `list_conversations` | List recent conversations, filtered to allowlisted contacts. |
+| `get_recent_messages` | Read inbound and outbound messages with one allowlisted contact. |
+
+Conversation tools always use `EASYHOOK_FROM`. `get_recent_messages` rejects contacts outside `EASYHOOK_ALLOWED_TO`; `list_conversations` removes non-allowlisted contacts before returning data to the MCP client.
 
 Easyhook service-window, consent, wallet, template, and Meta policy checks still apply.
 
