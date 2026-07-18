@@ -7,7 +7,7 @@ const mediaType = z.enum(["image", "video", "audio", "document", "sticker"]);
 
 export function createServer(config: EasyhookConfig): McpServer {
   const client = new EasyhookClient(config);
-  const server = new McpServer({ name: "easyhook", version: "0.2.0" });
+  const server = new McpServer({ name: "easyhook", version: "0.2.1" });
 
   server.registerTool(
     "list_conversations",
