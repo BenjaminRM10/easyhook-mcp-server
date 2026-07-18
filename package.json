@@ -1,0 +1,53 @@
+{
+  "name": "easyhook-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for sending allowlisted Easyhook messages from AI agents.",
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "Easyhook",
+    "email": "soporte@easyhook.dev",
+    "url": "https://easyhook.dev"
+  },
+  "homepage": "https://easyhook.dev",
+  "bugs": {
+    "url": "https://github.com/BenjaminRM10/easyhook-mcp-server/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BenjaminRM10/easyhook-mcp-server.git"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "easyhook",
+    "whatsapp",
+    "messaging",
+    "codex"
+  ],
+  "bin": {
+    "easyhook-mcp-server": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.11",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
