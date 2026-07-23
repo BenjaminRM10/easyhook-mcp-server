@@ -7,13 +7,23 @@ const mediaType = z.enum(["image", "video", "audio", "document", "sticker"]);
 
 export function createServer(config: EasyhookConfig): McpServer {
   const client = new EasyhookClient(config);
-  const server = new McpServer({ name: "easyhook", version: "0.2.1" });
+  const server = new McpServer({ name: "easyhook", version: "0.3.0" });
+
+  server.registerTool(
+    "list_contacts",
+    {
+      title: "List permitted Easyhook contacts",
+      description: "List every contact this agent may read or message, including the configured name and usage description.",
+      inputSchema: z.object({}),
+    },
+    async () => execute(async () => ({ from: config.from, contacts: config.contacts })),
+  );
 
   server.registerTool(
     "list_conversations",
     {
       title: "List Easyhook conversations",
-      description: "List recent WhatsApp conversations for the configured sender. Only contacts in EASYHOOK_ALLOWED_TO are returned.",
+      description: "List recent WhatsApp conversations for the configured sender. Only configured contacts are returned.",
       inputSchema: z.object({
         limit: z.number().int().min(1).max(100).default(20),
         before: z.string().optional().describe("ISO 8601 cursor from a previous response."),
@@ -25,7 +35,7 @@ export function createServer(config: EasyhookConfig): McpServer {
         limit: "100",
         before,
       }));
-      return filterAllowedConversations(response, config.allowedTo, limit);
+      return filterAllowedConversations(response, config, limit);
     }),
   );
 
@@ -35,7 +45,7 @@ export function createServer(config: EasyhookConfig): McpServer {
       title: "Get recent Easyhook messages",
       description: "Read recent inbound and outbound WhatsApp messages with one allowlisted contact.",
       inputSchema: z.object({
-        contact: z.string().describe("Contact phone. Must be in EASYHOOK_ALLOWED_TO."),
+        contact: z.string().describe("Configured contact name or phone. Use list_contacts when unsure."),
         limit: z.number().int().min(1).max(100).default(50),
         before: z.string().optional().describe("ISO 8601 cursor from a previous response."),
       }),
@@ -54,9 +64,9 @@ export function createServer(config: EasyhookConfig): McpServer {
     "send_text",
     {
       title: "Send Easyhook text",
-      description: "Send an immediate, scheduled, or humanized text message to an allowlisted phone.",
+      description: "Send an immediate, scheduled, or humanized text message to a configured contact.",
       inputSchema: z.object({
-        to: z.string().describe("Destination phone. Must be in EASYHOOK_ALLOWED_TO."),
+        to: z.string().describe("Configured contact name or phone. Use list_contacts when unsure."),
         body: z.string().min(1).describe("Text to send."),
         delivery: z.enum(["standard", "humanized"]).default("standard"),
         at: z.string().optional().describe("ISO 8601 schedule time. Standard delivery only."),
@@ -240,13 +250,22 @@ function compactStrings(input: Record<string, string | undefined>): Record<strin
   return Object.fromEntries(Object.entries(input).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1] !== ""));
 }
 
-function filterAllowedConversations(response: unknown, allowedTo: ReadonlySet<string>, limit: number): unknown {
+function filterAllowedConversations(response: unknown, config: EasyhookConfig, limit: number): unknown {
   if (!isRecord(response) || !Array.isArray(response.conversations)) return response;
   const conversations = response.conversations
-    .filter((conversation) => {
-      if (!isRecord(conversation) || !isRecord(conversation.contact)) return false;
+    .flatMap((conversation) => {
+      if (!isRecord(conversation) || !isRecord(conversation.contact)) return [];
       const phone = typeof conversation.contact.phone === "string" ? conversation.contact.phone.replace(/\D/g, "") : "";
-      return allowedTo.has(phone);
+      const configured = config.contacts.find((contact) => contact.phone === phone);
+      if (!configured) return [];
+      return [{
+        ...conversation,
+        contact: {
+          ...conversation.contact,
+          configured_name: configured.name,
+          description: configured.description,
+        },
+      }];
     })
     .slice(0, limit);
   return { ...response, conversations };

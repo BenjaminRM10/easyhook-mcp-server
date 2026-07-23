@@ -22,6 +22,7 @@ test("negotiates MCP and exposes the restricted tool set", async () => {
       response.tools.map((tool) => tool.name).sort(),
       [
         "get_recent_messages",
+        "list_contacts",
         "list_conversations",
         "list_flows",
         "list_media",
@@ -71,7 +72,9 @@ test("only exposes conversation data for allowlisted contacts", async () => {
   const server = createServer(loadConfig({
     EASYHOOK_API_KEY: "eh_live_test",
     EASYHOOK_FROM: "5218661479075",
-    EASYHOOK_ALLOWED_TO: "5215660069997",
+    EASYHOOK_CONTACTS: JSON.stringify([
+      { phone: "5215660069997", name: "Tram", description: "QA recipient" },
+    ]),
   }));
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "easyhook-mcp-test", version: "1.0.0" });
@@ -79,11 +82,16 @@ test("only exposes conversation data for allowlisted contacts", async () => {
   await server.connect(serverTransport);
   try {
     await client.connect(clientTransport);
+    const contacts = await client.callTool({ name: "list_contacts", arguments: {} });
+    assert.match(JSON.stringify(contacts.content), /Tram/);
+    assert.match(JSON.stringify(contacts.content), /QA recipient/);
+
     const conversations = await client.callTool({ name: "list_conversations", arguments: {} });
     assert.match(JSON.stringify(conversations.content), /Allowed/);
+    assert.match(JSON.stringify(conversations.content), /configured_name/);
     assert.doesNotMatch(JSON.stringify(conversations.content), /Private|hidden/);
 
-    const messages = await client.callTool({ name: "get_recent_messages", arguments: { contact: "+52 1 566 006 9997" } });
+    const messages = await client.callTool({ name: "get_recent_messages", arguments: { contact: "Tram" } });
     assert.match(JSON.stringify(messages.content), /reply/);
 
     const denied = await client.callTool({ name: "get_recent_messages", arguments: { contact: "528442461514" } });
