@@ -26,6 +26,7 @@ Equivalent `~/.codex/config.toml`:
 [mcp_servers.easyhook]
 command = "npx"
 args = ["-y", "easyhook-mcp-server"]
+startup_timeout_sec = 90
 
 [mcp_servers.easyhook.env]
 EASYHOOK_API_KEY = "eh_live_xxx"
@@ -34,6 +35,10 @@ EASYHOOK_CONTACTS = "[{\"phone\":\"5215660069997\",\"name\":\"Tram\",\"descripti
 ```
 
 Restart the MCP client after changing configuration.
+
+The longer startup timeout only affects the initial connection. It gives `npx`
+enough time to download the package on its first run; cached starts are normally
+much faster.
 
 ## Optional configuration
 
