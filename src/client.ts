@@ -13,10 +13,10 @@ export class EasyhookApiError extends Error {
 export class EasyhookClient {
   constructor(private readonly config: EasyhookConfig) {}
 
-  get(path: string, query?: Record<string, string>): Promise<unknown> {
+  get(path: string, query?: Record<string, string>, timeoutMs = 30_000): Promise<unknown> {
     const url = new URL(path, this.config.baseUrl);
     for (const [key, value] of Object.entries(query ?? {})) url.searchParams.set(key, value);
-    return this.request(url, { method: "GET" });
+    return this.request(url, { method: "GET" }, timeoutMs);
   }
 
   post(path: string, body: Record<string, unknown>): Promise<unknown> {
@@ -27,7 +27,7 @@ export class EasyhookClient {
     });
   }
 
-  private async request(url: URL, init: RequestInit): Promise<unknown> {
+  private async request(url: URL, init: RequestInit, timeoutMs = 30_000): Promise<unknown> {
     const response = await fetch(url, {
       ...init,
       headers: {
@@ -35,7 +35,7 @@ export class EasyhookClient {
         Accept: "application/json",
         ...init.headers,
       },
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     const text = await response.text();
     const payload = parseResponse(text);

@@ -32,6 +32,7 @@ test("negotiates MCP and exposes the restricted tool set", async () => {
         "send_media",
         "send_template",
         "send_text",
+        "wait_for_message",
       ],
     );
     const denied = await client.callTool({
@@ -66,6 +67,13 @@ test("only exposes conversation data for allowlisted contacts", async () => {
         headers: { "content-type": "application/json" },
       });
     }
+    if (url.pathname === "/v1/conversations/5215660069997/messages/wait") {
+      return new Response(JSON.stringify({
+        contact: "5215660069997",
+        timed_out: false,
+        messages: [{ id: "wamid.next", direction: "in", type: "text", text: "next instruction" }],
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
     return new Response(JSON.stringify({ error: "not_found" }), { status: 404 });
   };
 
@@ -93,6 +101,12 @@ test("only exposes conversation data for allowlisted contacts", async () => {
 
     const messages = await client.callTool({ name: "get_recent_messages", arguments: { contact: "Tram" } });
     assert.match(JSON.stringify(messages.content), /reply/);
+
+    const waited = await client.callTool({
+      name: "wait_for_message",
+      arguments: { contact: "Tram", after_id: "wamid.previous", timeout_seconds: 30 },
+    });
+    assert.match(JSON.stringify(waited.content), /next instruction/);
 
     const denied = await client.callTool({ name: "get_recent_messages", arguments: { contact: "528442461514" } });
     assert.equal(denied.isError, true);
