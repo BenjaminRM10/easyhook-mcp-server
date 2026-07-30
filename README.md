@@ -60,6 +60,10 @@ much faster.
 | `send_template` | Send an approved WhatsApp template. |
 | `send_flow` | Send a published WhatsApp Flow. |
 | `send_consent_flow` | Send the default opt-in or opt-out Flow. |
+| `check_template_category` | Check whether content matches its selected Meta template category. |
+| `create_template` | Submit a WhatsApp template to Meta for approval. |
+| `create_onboarding_url` | Create a hosted onboarding URL for any supported channel. |
+| `send_onboarding_link` | Send a hosted onboarding URL to an allowlisted WhatsApp contact. |
 | `list_templates` | List templates for the configured sender's WABA. |
 | `list_media` | List reusable media for the configured sender's WABA. |
 | `list_flows` | List Flows for the configured sender's WABA. |

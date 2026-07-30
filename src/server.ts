@@ -4,10 +4,12 @@ import { EasyhookApiError, EasyhookClient } from "./client.js";
 import { requireAllowedRecipient, type EasyhookConfig } from "./config.js";
 
 const mediaType = z.enum(["image", "video", "audio", "document", "sticker"]);
+const onboardingProvider = z.enum(["whatsapp", "messenger", "instagram", "telegram", "gmail", "outlook", "imap_smtp", "mercadolibre"]);
+const templateCategory = z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]);
 
 export function createServer(config: EasyhookConfig): McpServer {
   const client = new EasyhookClient(config);
-  const server = new McpServer({ name: "easyhook", version: "0.4.0" });
+  const server = new McpServer({ name: "easyhook", version: "0.5.0" });
 
   server.registerTool(
     "list_contacts",
@@ -214,11 +216,93 @@ export function createServer(config: EasyhookConfig): McpServer {
         mode: z.enum(["opt_in", "opt_out"]),
       }),
     },
-    async ({ to, mode }) => execute(async () => client.post("/v1/consent/send-flow", {
+    async ({ to, mode }) => execute(async () => client.post("/v1/consent", {
       from: config.from,
       to: requireAllowedRecipient(config, to),
       mode,
     })),
+  );
+
+  server.registerTool(
+    "check_template_category",
+    {
+      title: "Check WhatsApp template category",
+      description: "Check whether template content appears consistent with its selected Meta category. This returns advice only and does not submit the template.",
+      inputSchema: z.object({
+        category: templateCategory,
+        components: z.array(z.record(z.string(), z.unknown())).min(1),
+      }),
+    },
+    async ({ category, components }) => execute(async () => client.post("/v1/templates/classify", {
+      category,
+      components,
+    })),
+  );
+
+  server.registerTool(
+    "create_template",
+    {
+      title: "Create WhatsApp template",
+      description: "Submit a WhatsApp template to Meta for approval. Easyhook also returns non-blocking category advice.",
+      inputSchema: z.object({
+        name: z.string().min(1),
+        language: z.string().min(2),
+        category: templateCategory,
+        parameter_format: z.enum(["POSITIONAL", "NAMED"]).default("POSITIONAL"),
+        components: z.array(z.record(z.string(), z.unknown())).min(1),
+      }),
+    },
+    async ({ name, language, category, parameter_format, components }) => execute(async () => client.post("/v1/templates", {
+      from: config.from,
+      name,
+      language,
+      category,
+      parameter_format,
+      components,
+    })),
+  );
+
+  server.registerTool(
+    "create_onboarding_url",
+    {
+      title: "Create Easyhook onboarding URL",
+      description: "Create a one-time hosted URL for connecting a channel to the Easyhook organization.",
+      inputSchema: z.object({
+        provider: onboardingProvider,
+        signup_mode: z.enum(["cloud_api", "coexistence"]).optional().describe("WhatsApp only."),
+        language: z.enum(["es", "en"]).default("es"),
+        return_url: z.string().url().optional(),
+      }),
+    },
+    async ({ provider, signup_mode, language, return_url }) => execute(async () => client.post("/v1/onboarding/sessions", compact({
+      provider,
+      signup_mode: provider === "whatsapp" ? signup_mode ?? "coexistence" : undefined,
+      language,
+      return_url,
+    }))),
+  );
+
+  server.registerTool(
+    "send_onboarding_link",
+    {
+      title: "Send Easyhook onboarding link",
+      description: "Create an onboarding URL and send it by WhatsApp to an allowlisted contact.",
+      inputSchema: z.object({
+        to: z.string().describe("Configured contact name or phone."),
+        provider: onboardingProvider,
+        signup_mode: z.enum(["cloud_api", "coexistence"]).optional().describe("WhatsApp only."),
+        language: z.enum(["es", "en"]).default("es"),
+        return_url: z.string().url().optional(),
+      }),
+    },
+    async ({ to, provider, signup_mode, language, return_url }) => execute(async () => client.post("/v1/onboarding/sessions/send", compact({
+      from: config.from,
+      to: requireAllowedRecipient(config, to),
+      provider,
+      signup_mode: provider === "whatsapp" ? signup_mode ?? "coexistence" : undefined,
+      language,
+      return_url,
+    }))),
   );
 
   server.registerTool(
@@ -235,7 +319,7 @@ export function createServer(config: EasyhookConfig): McpServer {
     "list_media",
     {
       title: "List Easyhook media",
-      description: "List reusable media belonging to the WABA resolved from the configured sender.",
+      description: "List reusable media available to every channel in the Easyhook organization.",
       inputSchema: z.object({}),
     },
     async () => execute(async () => client.get("/v1/media", { from: config.from })),

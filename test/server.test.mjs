@@ -21,6 +21,9 @@ test("negotiates MCP and exposes the restricted tool set", async () => {
     assert.deepEqual(
       response.tools.map((tool) => tool.name).sort(),
       [
+        "check_template_category",
+        "create_onboarding_url",
+        "create_template",
         "get_recent_messages",
         "list_contacts",
         "list_conversations",
@@ -30,6 +33,7 @@ test("negotiates MCP and exposes the restricted tool set", async () => {
         "send_consent_flow",
         "send_flow",
         "send_media",
+        "send_onboarding_link",
         "send_template",
         "send_text",
         "wait_for_message",
