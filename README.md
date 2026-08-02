@@ -65,7 +65,7 @@ much faster.
 | `create_onboarding_url` | Create a hosted onboarding URL for any supported channel. |
 | `send_onboarding_link` | Send a hosted onboarding URL to an allowlisted WhatsApp contact. |
 | `list_templates` | List templates for the configured sender's WABA. |
-| `list_media` | List reusable media for the configured sender's WABA. |
+| `list_media` | List reusable media owned by the configured Easyhook organization. |
 | `list_flows` | List Flows for the configured sender's WABA. |
 | `list_conversations` | List recent conversations, filtered to allowlisted contacts. |
 | `get_recent_messages` | Read inbound and outbound messages with one allowlisted contact. |
