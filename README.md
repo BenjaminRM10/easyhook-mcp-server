@@ -62,7 +62,7 @@ much faster.
 | `send_consent_flow` | Send the default opt-in or opt-out Flow. |
 | `check_template_category` | Check whether content matches its selected Meta template category. |
 | `create_template` | Submit a WhatsApp template to Meta for approval. |
-| `create_onboarding_url` | Create a hosted onboarding URL for any supported channel. |
+| `create_onboarding_url` | Create a hosted onboarding URL for any supported channel, including TikTok Business. |
 | `send_onboarding_link` | Send a hosted onboarding URL to an allowlisted WhatsApp contact. |
 | `list_templates` | List templates for the configured sender's WABA. |
 | `list_media` | List reusable media owned by the configured Easyhook organization. |

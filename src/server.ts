@@ -4,7 +4,7 @@ import { EasyhookApiError, EasyhookClient } from "./client.js";
 import { requireAllowedRecipient, type EasyhookConfig } from "./config.js";
 
 const mediaType = z.enum(["image", "video", "audio", "document", "sticker"]);
-const onboardingProvider = z.enum(["whatsapp", "messenger", "instagram", "telegram", "gmail", "outlook", "imap_smtp", "mercadolibre"]);
+const onboardingProvider = z.enum(["whatsapp", "messenger", "instagram", "telegram", "gmail", "outlook", "imap_smtp", "mercadolibre", "tiktok"]);
 const templateCategory = z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]);
 
 export function createServer(config: EasyhookConfig): McpServer {
