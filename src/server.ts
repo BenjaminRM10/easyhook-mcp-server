@@ -9,7 +9,7 @@ const templateCategory = z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]);
 
 export function createServer(config: EasyhookConfig): McpServer {
   const client = new EasyhookClient(config);
-  const server = new McpServer({ name: "easyhook", version: "0.5.0" });
+  const server = new McpServer({ name: "easyhook", version: "0.6.0" });
 
   server.registerTool(
     "list_contacts",
@@ -142,6 +142,86 @@ export function createServer(config: EasyhookConfig): McpServer {
         filename,
         at,
       }));
+    }),
+  );
+
+  server.registerTool(
+    "send_interactive",
+    {
+      title: "Send Easyhook interactive message",
+      description: "Send standardized reply buttons or one URL button to an allowlisted contact. Provider capability rules still apply.",
+      inputSchema: z.object({
+        to: z.string(),
+        body: z.string().min(1),
+        buttons: z.array(z.object({
+          type: z.enum(["reply", "url"]),
+          title: z.string().min(1).max(20),
+          payload: z.string().optional(),
+          url: z.string().url().optional(),
+        })).min(1).max(3),
+      }),
+    },
+    async ({ to, body, buttons }) => execute(async () => client.post("/v1/messages/interactive", {
+      from: config.from,
+      to: requireAllowedRecipient(config, to),
+      body,
+      buttons,
+    })),
+  );
+
+  server.registerTool(
+    "reply_to_message",
+    {
+      title: "Reply to an Easyhook message",
+      description: "Send a contextual text reply to an inbound provider message from an allowlisted contact.",
+      inputSchema: z.object({ to: z.string(), message_id: z.string().min(1), body: z.string().min(1) }),
+    },
+    async ({ to, message_id, body }) => execute(async () => client.post("/v1/messages/reply", {
+      from: config.from,
+      to: requireAllowedRecipient(config, to),
+      message_id,
+      body,
+    })),
+  );
+
+  server.registerTool(
+    "react_to_message",
+    {
+      title: "React to an Easyhook message",
+      description: "Add or remove a reaction on a provider message. Use an empty emoji to remove the reaction.",
+      inputSchema: z.object({ to: z.string(), message_id: z.string().min(1), emoji: z.string().max(16) }),
+    },
+    async ({ to, message_id, emoji }) => execute(async () => client.post("/v1/messages/reaction", {
+      from: config.from,
+      to: requireAllowedRecipient(config, to),
+      message_id,
+      emoji,
+    })),
+  );
+
+  server.registerTool(
+    "mark_message_read",
+    {
+      title: "Mark an Easyhook message read",
+      description: "Send a read receipt for an inbound provider message when the channel supports it.",
+      inputSchema: z.object({ to: z.string(), message_id: z.string().min(1) }),
+    },
+    async ({ to, message_id }) => execute(async () => {
+      requireAllowedRecipient(config, to);
+      return client.post("/v1/messages/read", { from: config.from, message_id });
+    }),
+  );
+
+  server.registerTool(
+    "show_typing",
+    {
+      title: "Show Easyhook typing indicator",
+      description: "Show a best-effort typing indicator for an allowlisted conversation when the provider supports it.",
+      inputSchema: z.object({ to: z.string(), message_id: z.string().min(1) }),
+    },
+    async ({ to, message_id }) => execute(async () => {
+      requireAllowedRecipient(config, to);
+      return client.post("/v1/messages/typing", { from: config.from, message_id });
     }),
   );
 

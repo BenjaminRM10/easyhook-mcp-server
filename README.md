@@ -57,6 +57,11 @@ much faster.
 | `list_contacts` | List permitted contacts with their names and usage descriptions. |
 | `send_text` | Send standard, scheduled, or humanized text. |
 | `send_media` | Send media by reusable name, Meta id, or public URL. |
+| `send_interactive` | Send standardized reply or URL buttons. |
+| `reply_to_message` | Reply contextually to one provider message. |
+| `react_to_message` | Add or remove a supported message reaction. |
+| `mark_message_read` | Mark an inbound provider message as read. |
+| `show_typing` | Show a best-effort typing indicator. |
 | `send_template` | Send an approved WhatsApp template. |
 | `send_flow` | Send a published WhatsApp Flow. |
 | `send_consent_flow` | Send the default opt-in or opt-out Flow. |
