@@ -4,7 +4,7 @@ import { EasyhookApiError, EasyhookClient } from "./client.js";
 import { requireAllowedRecipient, type EasyhookConfig } from "./config.js";
 
 const mediaType = z.enum(["image", "video", "audio", "document", "sticker"]);
-const onboardingProvider = z.enum(["whatsapp", "messenger", "instagram", "telegram", "gmail", "outlook", "imap_smtp", "mercadolibre", "tiktok"]);
+const onboardingProvider = z.enum(["whatsapp", "messenger", "instagram", "facebook_comments", "instagram_comments", "telegram", "gmail", "outlook", "imap_smtp", "mercadolibre", "tiktok"]);
 const templateCategory = z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]);
 
 export function createServer(config: EasyhookConfig): McpServer {
@@ -18,7 +18,7 @@ export function createServer(config: EasyhookConfig): McpServer {
       description: "List every contact this agent may read or message, including the configured name and usage description.",
       inputSchema: z.object({}),
     },
-    async () => execute(async () => ({ from: config.from, contacts: config.contacts })),
+    async () => execute(async () => ({ from: config.from, channel: config.channel, contacts: config.contacts })),
   );
 
   server.registerTool(
@@ -93,7 +93,7 @@ export function createServer(config: EasyhookConfig): McpServer {
     "send_text",
     {
       title: "Send Easyhook text",
-      description: "Send an immediate, scheduled, or humanized text message to a configured contact.",
+      description: "Send an immediate, scheduled, or humanized Easyhook text to a configured contact. EASYHOOK_CHANNEL disambiguates a number shared by WhatsApp and SMS.",
       inputSchema: z.object({
         to: z.string().describe("Configured contact name or phone. Use list_contacts when unsure."),
         body: z.string().min(1).describe("Text to send."),
@@ -106,7 +106,7 @@ export function createServer(config: EasyhookConfig): McpServer {
       const recipient = requireAllowedRecipient(config, to);
       if (delivery === "humanized" && at) throw new Error("humanized_delivery_cannot_be_scheduled");
       const path = delivery === "humanized" ? "/v1/messages/humanized-text" : "/v1/messages/text";
-      return client.post(path, compact({ from: config.from, to: recipient, body, at, message_id }));
+      return client.post(path, compact({ from: config.from, to: recipient, body, at, message_id, channel: config.channel }));
     }),
   );
 
@@ -141,6 +141,7 @@ export function createServer(config: EasyhookConfig): McpServer {
         caption,
         filename,
         at,
+        channel: config.channel,
       }));
     }),
   );

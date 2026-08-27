@@ -7,6 +7,7 @@ export interface EasyhookContact {
 export interface EasyhookConfig {
   apiKey: string;
   from: string;
+  channel: "whatsapp" | "sms" | null;
   allowedTo: ReadonlySet<string>;
   contacts: readonly EasyhookContact[];
   baseUrl: string;
@@ -19,6 +20,7 @@ export function normalizePhone(value: string): string {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): EasyhookConfig {
   const apiKey = required(env, "EASYHOOK_API_KEY");
   const from = normalizePhone(required(env, "EASYHOOK_FROM"));
+  const channel = optionalChannel(env.EASYHOOK_CHANNEL);
   const contacts = env.EASYHOOK_CONTACTS?.trim()
     ? parseContacts(env.EASYHOOK_CONTACTS)
     : parseLegacyContacts(required(env, "EASYHOOK_ALLOWED_TO"));
@@ -32,10 +34,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): EasyhookConfig
   return {
     apiKey,
     from,
+    channel,
     allowedTo,
     contacts,
     baseUrl: normalizeBaseUrl(env.EASYHOOK_BASE_URL ?? "https://api.easyhook.dev"),
   };
+}
+
+function optionalChannel(value: string | undefined): "whatsapp" | "sms" | null {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === "whatsapp" || normalized === "sms") return normalized;
+  throw new Error("EASYHOOK_CHANNEL must be whatsapp or sms");
 }
 
 export function requireAllowedRecipient(config: EasyhookConfig, value: string): string {

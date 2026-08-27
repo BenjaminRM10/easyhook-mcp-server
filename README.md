@@ -6,6 +6,9 @@ Use Easyhook from Codex, Claude, and other Model Context Protocol clients. The s
 
 - `EASYHOOK_API_KEY` is read from the MCP process environment and is never accepted as a tool argument.
 - `EASYHOOK_FROM` fixes the sender for every operation.
+- `EASYHOOK_CHANNEL` optionally fixes `whatsapp` or `sms`. Set it when the same
+  number is connected to both; otherwise Easyhook intentionally returns
+  `ambiguous_sender` instead of guessing.
 - `EASYHOOK_CONTACTS` is a required JSON contact list. Every send and message read is checked locally.
 - There is no unrestricted HTTP tool and no tenant administration tool.
 - Keep the API key outside prompts, repositories, and workflow inputs.
@@ -46,6 +49,7 @@ much faster.
 | --- | --- | --- |
 | `EASYHOOK_API_KEY` | Yes | Easyhook organization API key. |
 | `EASYHOOK_FROM` | Yes | Fixed Easyhook WhatsApp sender. Formatted numbers are normalized to digits. |
+| `EASYHOOK_CHANNEL` | No | `whatsapp` or `sms`; required only when the fixed number is ambiguous. |
 | `EASYHOOK_CONTACTS` | Yes | JSON array of `{ phone, name, description }` contacts the agent may read or message. |
 | `EASYHOOK_ALLOWED_TO` | Legacy | Comma-separated phone allowlist used only when `EASYHOOK_CONTACTS` is absent. |
 | `EASYHOOK_BASE_URL` | No | API origin. Defaults to `https://api.easyhook.dev`. |
@@ -67,7 +71,7 @@ much faster.
 | `send_consent_flow` | Send the default opt-in or opt-out Flow. |
 | `check_template_category` | Check whether content matches its selected Meta template category. |
 | `create_template` | Submit a WhatsApp template to Meta for approval. |
-| `create_onboarding_url` | Create a hosted onboarding URL for any supported channel, including TikTok Business Messaging. |
+| `create_onboarding_url` | Create a hosted onboarding URL for any supported channel, including Messenger, Instagram, Facebook/Instagram comments, and TikTok Business Messaging. |
 | `send_onboarding_link` | Send a hosted onboarding URL to an allowlisted WhatsApp contact. |
 | `list_templates` | List templates for the configured sender's WABA. |
 | `list_media` | List reusable media owned by the configured Easyhook organization. |
@@ -90,6 +94,11 @@ changes, destructive actions, or deployments without explicit approval in the
 active agent session.
 
 Easyhook service-window, consent, wallet, template, and Meta policy checks still apply.
+
+Channel disconnection is intentionally not exposed as an MCP tool because it is
+a tenant-administration, destructive operation. Use the authenticated public
+API contract `DELETE /v1/senders/{account_id}` from a user-approved management
+flow instead.
 
 ## Development
 

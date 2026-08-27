@@ -38,6 +38,16 @@ test("loads named contacts and resolves names or formatted phones", () => {
   assert.equal(requireAllowedRecipient(config, "+52 1 566 006 9997"), "5215660069997");
 });
 
+test("loads an explicit SMS channel for an ambiguous phone number", () => {
+  const config = loadConfig({
+    EASYHOOK_API_KEY: "eh_test",
+    EASYHOOK_FROM: "+1 312 555 0100",
+    EASYHOOK_CHANNEL: "sms",
+    EASYHOOK_ALLOWED_TO: "+1 312 555 0199",
+  });
+  assert.equal(config.channel, "sms");
+});
+
 test("rejects duplicate contact names", () => {
   assert.throws(() => loadConfig({
     EASYHOOK_API_KEY: "eh_live_test",
