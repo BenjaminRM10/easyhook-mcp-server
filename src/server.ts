@@ -9,7 +9,7 @@ const templateCategory = z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]);
 
 export function createServer(config: EasyhookConfig): McpServer {
   const client = new EasyhookClient(config);
-  const server = new McpServer({ name: "easyhook", version: "0.6.1" });
+  const server = new McpServer({ name: "easyhook", version: "0.6.3" });
 
   server.registerTool(
     "list_contacts",
@@ -351,7 +351,7 @@ export function createServer(config: EasyhookConfig): McpServer {
       inputSchema: z.object({
         provider: onboardingProvider,
         signup_mode: z.enum(["cloud_api", "coexistence"]).optional().describe("WhatsApp only."),
-        language: z.enum(["es", "en"]).default("es"),
+        language: z.enum(["es", "en", "pt-BR"]).default("es"),
         return_url: z.string().url().optional(),
       }),
     },
@@ -372,7 +372,7 @@ export function createServer(config: EasyhookConfig): McpServer {
         to: z.string().describe("Configured contact name or phone."),
         provider: onboardingProvider,
         signup_mode: z.enum(["cloud_api", "coexistence"]).optional().describe("WhatsApp only."),
-        language: z.enum(["es", "en"]).default("es"),
+        language: z.enum(["es", "en", "pt-BR"]).default("es"),
         return_url: z.string().url().optional(),
       }),
     },
