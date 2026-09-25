@@ -75,4 +75,37 @@ test("accepts formatted forms of an allowlisted recipient", () => {
     EASYHOOK_ALLOWED_TO: "5215660069997",
   });
   assert.equal(requireAllowedRecipient(config, "+52 1 566 006 9997"), "5215660069997");
+  assert.throws(() => requireAllowedRecipient(config, "other+52 1 566 006 9997"), /recipient_not_allowed/);
+});
+
+test("organization mode accepts international phones without a contact list", () => {
+  const config = loadConfig({
+    EASYHOOK_API_KEY: "eh_live_test",
+    EASYHOOK_FROM: "5218661479075",
+    EASYHOOK_CONTACT_ACCESS: "organization",
+  });
+  assert.equal(config.contactAccess, "organization");
+  assert.deepEqual(config.contacts, []);
+  assert.equal(requireAllowedRecipient(config, "+52 1 566 006 9997"), "5215660069997");
+  assert.throws(() => requireAllowedRecipient(config, "someone@example.com"), /invalid_recipient/);
+  assert.throws(() => requireAllowedRecipient(config, "123"), /invalid_recipient/);
+});
+
+test("organization mode still resolves configured names and rejects unknown names", () => {
+  const config = loadConfig({
+    EASYHOOK_API_KEY: "eh_live_test",
+    EASYHOOK_FROM: "5218661479075",
+    EASYHOOK_CONTACT_ACCESS: "organization",
+    EASYHOOK_CONTACTS: '[{"phone":"5215660069997","name":"Tram","description":"QA"}]',
+  });
+  assert.equal(requireAllowedRecipient(config, "tram"), "5215660069997");
+  assert.throws(() => requireAllowedRecipient(config, "Other Person"), /invalid_recipient/);
+});
+
+test("rejects invalid contact access mode", () => {
+  assert.throws(() => loadConfig({
+    EASYHOOK_API_KEY: "eh_live_test",
+    EASYHOOK_FROM: "5218661479075",
+    EASYHOOK_CONTACT_ACCESS: "all",
+  }), /EASYHOOK_CONTACT_ACCESS must be allowlist or organization/);
 });

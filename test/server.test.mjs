@@ -126,3 +126,68 @@ test("only exposes conversation data for allowlisted contacts", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test("organization mode reads unregistered contacts and sends only through the fixed sender", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    requests.push({ url, init });
+    if (url.pathname === "/v1/senders") return Response.json({ senders: [{ account_id: "5218661479075" }] });
+    if (url.pathname === "/v1/senders/5218661479075/health") return Response.json({ health: { status: "connected" } });
+    if (url.pathname === "/v1/conversations") return Response.json({
+      conversations: [
+        { contact: { phone: "5215660069997" }, last_message: { text: "First" } },
+        { contact: { phone: "528442461514" }, last_message: { text: "Second" } },
+      ],
+    });
+    if (url.pathname === "/v1/conversations/528442461514/messages") {
+      return Response.json({ messages: [{ id: "wamid.test", text: "Hello" }] });
+    }
+    if (url.pathname === "/v1/messages/text") return Response.json({ id: "wamid.sent" });
+    return Response.json({ error: "not_found" }, { status: 404 });
+  };
+
+  const server = createServer(loadConfig({
+    EASYHOOK_API_KEY: "eh_live_test",
+    EASYHOOK_FROM: "5218661479075",
+    EASYHOOK_CONTACT_ACCESS: "organization",
+    EASYHOOK_CONTACTS: '[{"phone":"5215660069997","name":"Tram","description":"QA"}]',
+  }));
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: "easyhook-mcp-test", version: "1.0.0" });
+
+  await server.connect(serverTransport);
+  try {
+    await client.connect(clientTransport);
+    const tools = await client.listTools();
+    assert.ok(tools.tools.some((tool) => tool.name === "list_senders"));
+    assert.ok(tools.tools.some((tool) => tool.name === "get_sender_health"));
+    const contacts = await client.callTool({ name: "list_contacts", arguments: {} });
+    assert.equal(JSON.parse(contacts.content[0].text).contact_access, "organization");
+    const senders = await client.callTool({ name: "list_senders", arguments: {} });
+    assert.match(JSON.stringify(senders.content), /5218661479075/);
+    const health = await client.callTool({ name: "get_sender_health", arguments: {} });
+    assert.match(JSON.stringify(health.content), /connected/);
+    const conversations = await client.callTool({ name: "list_conversations", arguments: {} });
+    assert.match(JSON.stringify(conversations.content), /First/);
+    assert.match(JSON.stringify(conversations.content), /Second/);
+    assert.match(JSON.stringify(conversations.content), /configured_name/);
+    const messages = await client.callTool({ name: "get_recent_messages", arguments: { contact: "+52 844 246 1514" } });
+    assert.match(JSON.stringify(messages.content), /wamid.test/);
+    const sent = await client.callTool({ name: "send_text", arguments: { to: "+52 844 246 1514", body: "Approved test" } });
+    assert.equal(sent.isError, undefined);
+    assert.match(JSON.stringify(sent.content), /wamid.sent/);
+    const sendRequest = requests.find(({ url }) => url.pathname === "/v1/messages/text");
+    assert.deepEqual(JSON.parse(sendRequest.init.body), {
+      from: "5218661479075",
+      to: "528442461514",
+      body: "Approved test",
+    });
+    assert.ok(requests.every(({ init }) => init.headers.Authorization === "Bearer eh_live_test"));
+  } finally {
+    await client.close();
+    await server.close();
+    globalThis.fetch = originalFetch;
+  }
+});

@@ -8,6 +8,7 @@ export interface EasyhookConfig {
   apiKey: string;
   from: string;
   channel: "whatsapp" | "sms" | null;
+  contactAccess: "allowlist" | "organization";
   allowedTo: ReadonlySet<string>;
   contacts: readonly EasyhookContact[];
   baseUrl: string;
@@ -21,13 +22,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): EasyhookConfig
   const apiKey = required(env, "EASYHOOK_API_KEY");
   const from = normalizePhone(required(env, "EASYHOOK_FROM"));
   const channel = optionalChannel(env.EASYHOOK_CHANNEL);
+  const contactAccess = optionalContactAccess(env.EASYHOOK_CONTACT_ACCESS);
   const contacts = env.EASYHOOK_CONTACTS?.trim()
     ? parseContacts(env.EASYHOOK_CONTACTS)
-    : parseLegacyContacts(required(env, "EASYHOOK_ALLOWED_TO"));
+    : parseLegacyContacts(contactAccess === "allowlist" ? required(env, "EASYHOOK_ALLOWED_TO") : env.EASYHOOK_ALLOWED_TO ?? "");
   const allowedTo = new Set(contacts.map((contact) => contact.phone));
 
   if (!from) throw new Error("EASYHOOK_FROM must contain a phone number");
-  if (allowedTo.size === 0) {
+  if (contactAccess === "allowlist" && allowedTo.size === 0) {
     throw new Error("EASYHOOK_CONTACTS or EASYHOOK_ALLOWED_TO must contain at least one phone number");
   }
 
@@ -35,10 +37,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): EasyhookConfig
     apiKey,
     from,
     channel,
+    contactAccess,
     allowedTo,
     contacts,
     baseUrl: normalizeBaseUrl(env.EASYHOOK_BASE_URL ?? "https://api.easyhook.dev"),
   };
+}
+
+function optionalContactAccess(value: string | undefined): "allowlist" | "organization" {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized || normalized === "allowlist") return "allowlist";
+  if (normalized === "organization") return "organization";
+  throw new Error("EASYHOOK_CONTACT_ACCESS must be allowlist or organization");
 }
 
 function optionalChannel(value: string | undefined): "whatsapp" | "sms" | null {
@@ -49,10 +59,15 @@ function optionalChannel(value: string | undefined): "whatsapp" | "sms" | null {
 }
 
 export function requireAllowedRecipient(config: EasyhookConfig, value: string): string {
+  const phoneInput = /^\+?[\d\s().-]+$/.test(value.trim());
   const normalized = normalizePhone(value);
-  if (normalized && config.allowedTo.has(normalized)) return normalized;
+  if (phoneInput && normalized && config.allowedTo.has(normalized)) return normalized;
   const byName = config.contacts.find((contact) => contact.name.toLocaleLowerCase() === value.trim().toLocaleLowerCase());
   if (byName) return byName.phone;
+  if (config.contactAccess === "organization") {
+    if (phoneInput && /^\d{7,15}$/.test(normalized)) return normalized;
+    throw new Error("invalid_recipient: Use an international phone number with 7-15 digits or a configured contact name");
+  }
   throw new Error("recipient_not_allowed: Use a phone or contact name configured in EASYHOOK_CONTACTS");
 }
 
