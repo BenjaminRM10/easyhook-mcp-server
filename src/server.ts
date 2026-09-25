@@ -9,7 +9,7 @@ const templateCategory = z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]);
 
 export function createServer(config: EasyhookConfig): McpServer {
   const client = new EasyhookClient(config);
-  const server = new McpServer({ name: "easyhook", version: "0.7.0" });
+  const server = new McpServer({ name: "easyhook", version: "0.7.1" });
 
   server.registerTool(
     "list_contacts",
@@ -35,11 +35,11 @@ export function createServer(config: EasyhookConfig): McpServer {
     server.registerTool(
       "get_sender_health",
       {
-        title: "Get configured Easyhook sender health",
-        description: "Check health of the fixed EASYHOOK_FROM sender. Read-only and scoped by the API key's organization.",
-        inputSchema: z.object({}),
+        title: "Get Easyhook sender health",
+        description: "Check health by canonical account_id from list_senders. If omitted, uses EASYHOOK_FROM when that is already a canonical ID. Read-only and scoped by the API key's organization.",
+        inputSchema: z.object({ account_id: z.string().min(1).max(512).optional() }),
       },
-      async () => execute(async () => client.get(`/v1/senders/${encodeURIComponent(config.from)}/health`)),
+      async ({ account_id }) => execute(async () => client.get(`/v1/senders/${encodeURIComponent(account_id ?? config.from)}/health`)),
     );
   }
 

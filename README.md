@@ -62,7 +62,7 @@ much faster.
 | --- | --- |
 | `list_contacts` | List configured contacts with their names and usage descriptions, plus the active access mode. |
 | `list_senders` | List senders and normalized health within the API-key organization (organization mode only). |
-| `get_sender_health` | Check the fixed sender's health (organization mode only). |
+| `get_sender_health` | Check an organization-owned sender's health by canonical `account_id` from `list_senders` (organization mode only). |
 | `send_text` | Send standard, scheduled, or humanized text. |
 | `send_media` | Send media by reusable name, Meta id, or public URL. |
 | `send_interactive` | Send standardized reply or URL buttons. |
@@ -84,7 +84,7 @@ much faster.
 | `get_recent_messages` | Read inbound and outbound messages with one permitted contact. |
 | `wait_for_message` | Wait up to five minutes for the next inbound message from one permitted contact. |
 
-Conversation and send tools always use `EASYHOOK_FROM`; `list_senders` is read-only and does not change it. Send and read tools accept either a configured contact name or its phone. In the default allowlist mode, `get_recent_messages` rejects contacts outside `EASYHOOK_CONTACTS` and `list_conversations` removes them. In organization mode, the same tools accept unlisted international phones of 7–15 digits and `list_conversations` returns all contacts for the fixed sender, annotating known contacts with their configured names and descriptions. Unknown names and non-phone identifiers are rejected locally. Backend API scopes, sender ownership, wallet, service-window, consent and provider checks still apply.
+Conversation and send tools always use `EASYHOOK_FROM`; `list_senders` and `get_sender_health` are read-only and do not change it. For health, pass the canonical `account_id` returned by `list_senders`; omitting it uses `EASYHOOK_FROM` only when that value is already canonical. Send and read tools accept either a configured contact name or its phone. In the default allowlist mode, `get_recent_messages` rejects contacts outside `EASYHOOK_CONTACTS` and `list_conversations` removes them. In organization mode, the same tools accept unlisted international phones of 7–15 digits and `list_conversations` returns all contacts for the fixed sender, annotating known contacts with their configured names and descriptions. Unknown names and non-phone identifiers are rejected locally. Backend API scopes, sender ownership, wallet, service-window, consent and provider checks still apply.
 
 To enable the broader mode, set `EASYHOOK_CONTACT_ACCESS=organization` in the MCP process environment and restart the client. Leave `EASYHOOK_CONTACTS` set if you want the agent to retain preferred names and usage descriptions. Reads of conversations and messages can be billed; sending can debit the wallet. The MCP does not bypass API-key scopes and does not expose tenant administration, arbitrary HTTP or sender disconnection.
 

@@ -133,8 +133,8 @@ test("organization mode reads unregistered contacts and sends only through the f
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     requests.push({ url, init });
-    if (url.pathname === "/v1/senders") return Response.json({ senders: [{ account_id: "5218661479075" }] });
-    if (url.pathname === "/v1/senders/5218661479075/health") return Response.json({ health: { status: "connected" } });
+    if (url.pathname === "/v1/senders") return Response.json({ senders: [{ account_id: "meta-phone-id", address: "5218661479075" }] });
+    if (url.pathname === "/v1/senders/meta-phone-id/health") return Response.json({ health: { status: "connected" } });
     if (url.pathname === "/v1/conversations") return Response.json({
       conversations: [
         { contact: { phone: "5215660069997" }, last_message: { text: "First" } },
@@ -166,8 +166,8 @@ test("organization mode reads unregistered contacts and sends only through the f
     const contacts = await client.callTool({ name: "list_contacts", arguments: {} });
     assert.equal(JSON.parse(contacts.content[0].text).contact_access, "organization");
     const senders = await client.callTool({ name: "list_senders", arguments: {} });
-    assert.match(JSON.stringify(senders.content), /5218661479075/);
-    const health = await client.callTool({ name: "get_sender_health", arguments: {} });
+    assert.match(JSON.stringify(senders.content), /meta-phone-id/);
+    const health = await client.callTool({ name: "get_sender_health", arguments: { account_id: "meta-phone-id" } });
     assert.match(JSON.stringify(health.content), /connected/);
     const conversations = await client.callTool({ name: "list_conversations", arguments: {} });
     assert.match(JSON.stringify(conversations.content), /First/);

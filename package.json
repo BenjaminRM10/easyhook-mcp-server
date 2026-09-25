@@ -1,6 +1,6 @@
 {
   "name": "easyhook-mcp-server",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "MCP server for scoped Easyhook messaging and conversation access from AI agents.",
   "type": "module",
   "license": "MIT",
